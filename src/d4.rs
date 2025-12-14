@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::{self, BufRead};
 
+#[allow(unused_assignments)]
 pub fn run() {
     let mut reader = io::BufReader::new(fs::File::open("forklift.txt").expect("reading file failed"));
     let mut line = String::new();

@@ -1,6 +1,5 @@
 use std::fs;
 use std::io::{self, BufRead};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 struct Battery {

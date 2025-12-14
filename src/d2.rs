@@ -41,6 +41,7 @@ impl VecInt {
         self._increment(self.buf.len() - 1);
     }
 
+    #[allow(dead_code)]
     fn invalid_one(&self) -> bool {
         // part one
         match self.buf.len() % 2 {
