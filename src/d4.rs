@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{self, BufRead};
 
 pub fn run() {
-    let mut reader = io::BufReader::new(fs::File::open("forklift_sample.txt").expect("reading file failed"));
+    let mut reader = io::BufReader::new(fs::File::open("forklift.txt").expect("reading file failed"));
     let mut line = String::new();
 
     let mut floor = Vec::<Vec<u8>>::new();
@@ -32,7 +32,7 @@ pub fn run() {
 
     let mut total_paper = 0;
 
-    let check = |x: usize, y: usize| -> bool {
+    fn check(floor: &Vec<Vec<u8>>, x: usize, y: usize) -> bool {
         let mut paper = 0;
 
         let ys = if y == 0 { y } else { y - 1 };
@@ -55,7 +55,7 @@ pub fn run() {
             }
         }
         return paper < 4;
-    };
+    }
 
     loop {
         let mut paper = 0;
@@ -64,7 +64,7 @@ pub fn run() {
             for x in 0..floor[y].len() {
                 // don't check if it's not paper
                 if floor[y][x] == 64 {
-                    if check(x, y) {
+                    if check(&floor, x, y) {
                         println!("Removing paper at {}, {}", x, y);
                         floor[y][x] = 46;
                         paper += 1;
