@@ -18,6 +18,7 @@ enum ColumnOp {
 
 #[derive(Debug)]
 struct Column {
+    intcol: Vec<Vec<char>>,
     ints: Vec<u64>,
     op: ColumnOp,
     width: usize, 
@@ -25,10 +26,22 @@ struct Column {
 
 impl Column {
     fn new(op: ColumnOp, width: usize) -> Self {
-        Self { ints: Vec::<u64>::new(), op, width }
+        let ic = vec![Vec::<char>::new(); 4];
+        Self { intcol: ic, ints: Vec::<u64>::new(), op, width }
     }
 
-    fn calculate(&self) -> u128 {
+    fn _parse_cols(&mut self) {
+        for mut c in &self.intcol {
+            let s = String::from_iter(c.clone());
+            println!("Got string {}", s);
+            if s != "" {
+                self.ints.push(s.parse::<u64>().unwrap());
+            }
+        }
+    }
+
+    fn calculate(&mut self) -> u128 {
+        self._parse_cols();
         match self.op {
             ColumnOp::ADD => {
                 return self.ints.clone().into_iter().sum::<u64>().into();
@@ -45,6 +58,7 @@ impl Column {
             }
         }
     }
+
 }
 
 #[allow(unused_variables, unused_assignments)]
@@ -82,9 +96,11 @@ fn do_line(columns: &mut Vec<Column>, line: &String) {
     let mut bint = Vec::<char>::new();
     let mut state = Parser::RESET;
 
+    // we know our puzzle only has four lines so we could probably cheese this
+    // instead of writing a true custom format parser
     for c in columns {
         // read width from line
-        for i in line[idx..idx+c.width].chars() {
+        for (n, i) in line[idx..idx+c.width].chars().enumerate() {
             match i {
                 ' ' => {
                     //println!("Found space");
@@ -93,15 +109,17 @@ fn do_line(columns: &mut Vec<Column>, line: &String) {
                 '0'..='9' => {
                     //println!("Pushing digit {}", i);
                     state = Parser::DIGIT;
-                    bint.push(i)
+                    println!("PUSH {} to {}", i, n);
+                    c.intcol[n].push(i);
+                    //bint.push(i)
                 }
                 _ => {}
             }
         }
-        let s = String::from_iter(bint.clone());
-        //println!("Got string {}", s);
-        c.ints.push(s.parse::<u64>().unwrap());
-        bint.clear();
+        //let s = String::from_iter(bint.clone());
+        ////println!("Got string {}", s);
+        //c.ints.push(s.parse::<u64>().unwrap());
+        //bint.clear();
         idx += c.width;
         //println!("New idx {}", idx);
     }
@@ -150,10 +168,12 @@ pub fn run() {
     println!("{:?}", columns);
 
     let mut ans: u128 = 0;
-    for c in columns {
+    for mut c in columns {
         ans += c.calculate();
     }
     println!("Ans {}", ans);
+    // 4648618073226 = ans
+    // 7329921182115 = ans p2
 
 }
 
