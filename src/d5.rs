@@ -21,6 +21,7 @@ impl FreshIngredientRange {
         self.stop - self.start + 1
     }
 
+    #[allow(unused_assignments)]
     fn union(&self, rhs: &Self) -> Self {
         let mut cs: u64 = 0;
         let mut ce: u64 = 0;
