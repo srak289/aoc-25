@@ -31,7 +31,7 @@ impl Column {
     }
 
     fn _parse_cols(&mut self) {
-        for mut c in &self.intcol {
+        for c in &self.intcol {
             let s = String::from_iter(c.clone());
             println!("Got string {}", s);
             if s != "" {
@@ -93,7 +93,7 @@ fn do_opline(columns: &mut Vec<Column>, line: &String) {
 #[allow(unused_variables, unused_assignments)]
 fn do_line(columns: &mut Vec<Column>, line: &String) {
     let mut idx: usize = 0;
-    let mut bint = Vec::<char>::new();
+    let bint = Vec::<char>::new();
     let mut state = Parser::RESET;
 
     // we know our puzzle only has four lines so we could probably cheese this
