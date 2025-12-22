@@ -1,57 +1,75 @@
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufReader, Read};
 
 pub fn run() {
     let mut reader = BufReader::new(File::open("beam.txt").expect("reading file failed"));
-    let mut l = String::new();
-    let mut buf = vec![b'.'; 256];
-    let mut splits: u64 = 0;
+    let mut buf = Vec::<u8>::new();
+    let _ = reader.read_to_end(&mut buf);
 
-    loop {
-        match reader.read_line(&mut l) {
-            Ok(x) => {
-                if x == 0 {
-                    break;
-                }
+    let mut lbuf = Vec::<u64>::new();
+    let mut cbuf = Vec::<u64>::new();
+    let mut lchar: u8 = b'.';
 
-                let mut lbuf = l.clone().into_bytes();
+    let mut reset: bool = false;
+    let mut idx: usize = 0;
 
-                for i in 0..lbuf.len() {
-                    match lbuf[i] {
-                        b'.' => {
-                            if buf[i] == b'|' {
-                                lbuf[i] = b'|';
-                                //println!("Beam travels through empty space");
-                            }
-                        }
-                        b'S' => {
-                            lbuf[i] = b'|';
-                            //println!("Beam emits from the source");
-                        }
-                        b'^' => {
-                            if buf[i] == b'|' {
-                                splits += 1;
-                                //println!("Splitting beam!");
-                                if i-1 >= 0 {
-                                    lbuf[i-1] = b'|';
-                                }
-                                if i+1 < lbuf.len() {
-                                    lbuf[i+1] = b'|';
-                                }
-                            }
-                        }
-                        b'|' | b'\n' => (),
-                        _ => {
-                            panic!("Unexpected char {}", lbuf[i]);
-                        }
+    for c in buf.drain(..) {
+        if !(lchar == b'^') {
+            cbuf.push(0);
+        }
+        match c {
+            b'.' => {
+                if lchar == b'^' {
+                    cbuf.push(lbuf[idx-1]);
+                    println!("idx {}", idx);
+                    println!("las buf {}", lbuf[idx-1]);
+                    cbuf[idx] = lbuf[idx];
+                    cbuf[idx] += lbuf[idx-1];
+                } else {
+                    if idx < lbuf.len() {
+                        cbuf[idx] = lbuf[idx];
+                    } else {
+                        // we grow the vec for the first row
+                        cbuf[idx] = 0;
                     }
                 }
-                buf = lbuf.to_vec();
-                print!("{}", String::from_utf8(buf.clone()).unwrap());
-                l.clear();
             }
-            Err(x) => panic!("{:?}", x),
+            b'^' => {
+                println!("Handling ^");
+                // check cell above and set left/right appropriately
+                // handle setting cell right based on cell upper-right ?
+                println!("lbuf {:?}", lbuf);
+                println!("cbuf {:?}", cbuf);
+                cbuf[idx-1] += lbuf[idx];
+                // beam split, current cell has zero paths
+                cbuf[idx] = 0;
+            }
+            b'\n' => {
+                println!("Resetting line");
+                // swap buffers
+                // we don't do anything clever with pointers, we just clone
+                lbuf = cbuf.clone();
+                cbuf.clear();
+                reset = true;
+            }
+            b'S' => {
+                // set current index to 1
+                // there will only be one source
+                cbuf[idx] = 1;
+            }
+            _ => {
+            }
         }
+        lchar = c;
+        idx += 1;
+        if reset {
+            reset = false;
+            idx = 0;
+        }
+        //assert_eq!(idx, cbuf.len() - 1);
     }
-    println!("Beam split {} times", splits);
+
+    println!("{:?}", lbuf);
+    println!("{:?}", cbuf);
+    println!("There are {} timelines", lbuf.into_iter().sum::<u64>());
 }
