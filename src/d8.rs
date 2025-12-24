@@ -43,6 +43,11 @@ impl<'a> Graph<'a> {
         Graph { circuits: Vec::<HashSet<&Node>>::new() }
     }
 
+    fn insert(&mut self, a: &'a Node) {
+        println!("Inserting new circuit for node {}", &a);
+        self.circuits.push(HashSet::<&Node>::from([a]));
+    }
+
     fn connect(&mut self, i: &'a Node, j: &'a Node) -> bool {
         let mut di = false;
         let mut ci: usize = 0;
@@ -104,6 +109,7 @@ impl<'a> Graph<'a> {
             let hs = HashSet::from([i, j]);
             self.circuits.push(hs);
         }
+        println!("Total circuits {}", self.circuits.len());
         return true;
     }
 }
@@ -124,7 +130,9 @@ pub fn run() {
                 // get rid of \n
                 let _ = line.pop();
                 let [x, y, z] = line.split(',').map(|s| s.parse::<i64>().unwrap()).collect::<Vec<_>>().try_into().unwrap();
-                nodes.push(Node::new(x, y, z));
+                let n = Node::new(x, y, z);
+                // this is not ideal but don't feel like rewriting
+                nodes.push(n);
                 line.clear();
             }
             Err(x) => panic!("{:?}", x),
@@ -136,7 +144,10 @@ pub fn run() {
 
     let mut d: u64 = 0;
 
+    let mut graph = Graph::new();
+
     for i in 0..nodes.len() {
+        graph.insert(&nodes[i]);
         for j in i+1..nodes.len() {
             //println!("Distance {:?}:{:?} is {}", &a, &b, (a-b));
             d += 1;
@@ -144,33 +155,36 @@ pub fn run() {
         }
     }
     println!("Done building {} distances", &d);
+    println!("Num circuits {}", graph.circuits.len());
 
     let mut sorted = distances.iter().collect::<Vec<(&(&Node, &Node), &f64)>>();
     sorted.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
     println!("Done sorting");
     //println!("Sorted {:#?}", &sorted);
+    println!("Num circuits {}", graph.circuits.len());
 
-    let mut graph = Graph::new();
-
-    while connections > 0 {
+    while sorted.len() > 0 {
         let n = sorted.pop();
-        if graph.connect(n.unwrap().0.0, n.unwrap().0.1) {
-            connections -= 1;
-        } else {
-            println!("Unsuccessful connection {:?}", n);
+        let _ = graph.connect(n.unwrap().0.0, n.unwrap().0.1);
+        if graph.circuits.len() == 1 {
+            println!("The coordinates: {}:{} : {}", n.unwrap().0.0, n.unwrap().0.1, (n.unwrap().0.0.x * n.unwrap().0.1.x));
+            // ans 100011612
+            break;
         }
+        println!("Num circuits {}", graph.circuits.len());
     }
+    println!("Num circuits {}", graph.circuits.len());
     println!("Done building graph");
 
-    graph.circuits.sort_by(|b, a| a.len().partial_cmp(&b.len()).unwrap());
-    println!("Done sorting graph");
+    //graph.circuits.sort_by(|b, a| a.len().partial_cmp(&b.len()).unwrap());
+    //println!("Done sorting graph");
 
-    let mut ans: usize = 1;
-    for i in 0..3 {
-        ans = ans * graph.circuits[i].len();
-    }
-    println!("{:?}", graph.circuits.into_iter().map(|x| x.len()).collect::<Vec<_>>());
-    println!("Ans: {}", ans);
+    //let mut ans: usize = 1;
+    //for i in 0..3 {
+    //    ans = ans * graph.circuits[i].len();
+    //}
+    //println!("{:?}", graph.circuits.into_iter().map(|x| x.len()).collect::<Vec<_>>());
+    //println!("Ans: {}", ans);
     //pt1 ans: 102816
     //assert_ne!(311190, ans); //too high
 }
