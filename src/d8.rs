@@ -43,7 +43,7 @@ impl<'a> Graph<'a> {
         Graph { circuits: Vec::<HashSet<&Node>>::new() }
     }
 
-    fn connect(&mut self, i: &'a Node, j: &'a Node) {
+    fn connect(&mut self, i: &'a Node, j: &'a Node) -> bool {
         let mut di = false;
         let mut ci: usize = 0;
         let mut dj = false;
@@ -58,12 +58,12 @@ impl<'a> Graph<'a> {
         // else we create a new set and push that to our list
         for idx in 0..self.circuits.len() {
             if self.circuits[idx].contains(i) {
-                println!("Found {} in circuit {}", i, idx);
+                //println!("Found {} in circuit {}", i, idx);
                 ci = idx;
                 di = true;
             }
             if self.circuits[idx].contains(j) {
-                println!("Found {} in circuit {}", j, idx);
+                //println!("Found {} in circuit {}", j, idx);
                 cj = idx;
                 dj = true;
             }
@@ -73,35 +73,44 @@ impl<'a> Graph<'a> {
         // same set
         if di && dj {
             if ci == cj {
-                dj = false;
+                return true;
             }
         }
 
         if di && dj {
-            println!("Connecting circuits {}:{}", &ci, &cj);
-            let hs: HashSet<&Node> = self.circuits.swap_remove(cj);
-            let _ = self.circuits[ci].union(&hs);
+            let mut r: usize = 0;
+            let mut o: usize = 0;
+
+            if cj < ci {
+                r = cj;
+                o = ci-1;
+            } else {
+                r = ci;
+                o = cj-1;
+            }
+            let hs: HashSet<&Node> = self.circuits.remove(r);
+            let hn = self.circuits[o].union(&hs).map(|&n| n).collect();
+            self.circuits[o] = hn;
         } else if di {
             // detected i in circuit ci, so insert j to ci
             // j is an orphan
             let _ = self.circuits[ci].insert(j);
-            println!("Connecting {}:{}", i, j);
         } else if dj {
             // detected j in circuit cj, so insert i to cj
             // i is an orphan
             let _ = self.circuits[cj].insert(i);
-            println!("Connecting {}:{}", i, j);
         } else {
             // if we get here we push a new circuit
             let hs = HashSet::from([i, j]);
-            println!("Adding new circuit {}:{}", &i, &j);
             self.circuits.push(hs);
         }
+        return true;
     }
 }
 
 pub fn run() {
-    let mut reader = BufReader::new(File::open("junction_sample.txt").expect("reading file failed"));
+    let mut connections = 1000;
+    let mut reader = BufReader::new(File::open("junction.txt").expect("reading file failed"));
     let mut line = String::new();
 
     let mut nodes = Vec::<Node>::new();
@@ -143,18 +152,25 @@ pub fn run() {
 
     let mut graph = Graph::new();
 
-    for d in 0..10 {
+    while connections > 0 {
         let n = sorted.pop();
-        graph.connect(n.unwrap().0.0, n.unwrap().0.1);
-        println!("{:#?}", &graph);
+        if graph.connect(n.unwrap().0.0, n.unwrap().0.1) {
+            connections -= 1;
+        } else {
+            println!("Unsuccessful connection {:?}", n);
+        }
     }
     println!("Done building graph");
 
     graph.circuits.sort_by(|b, a| a.len().partial_cmp(&b.len()).unwrap());
-    //println!("{:?}", graph);
+    println!("Done sorting graph");
+
     let mut ans: usize = 1;
     for i in 0..3 {
         ans = ans * graph.circuits[i].len();
     }
-    println!("{}", ans);
+    println!("{:?}", graph.circuits.into_iter().map(|x| x.len()).collect::<Vec<_>>());
+    println!("Ans: {}", ans);
+    //pt1 ans: 102816
+    //assert_ne!(311190, ans); //too high
 }
