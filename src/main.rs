@@ -8,6 +8,7 @@ mod d5;
 mod d6;
 mod d7;
 mod d8;
+mod d9;
 
 fn main() {
     let ap = Command::new("aoc")
@@ -44,6 +45,9 @@ fn main() {
         }
         "d8" => {
             d8::run();
+        }
+        "d9" => {
+            d9::run();
         }
         x => {
             panic!("No module {}", x);

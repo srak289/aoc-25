@@ -1,3 +1,4 @@
+#[allow(unused)]
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -38,6 +39,7 @@ struct Graph<'a> {
     circuits: Vec<HashSet<&'a Node>>,
 }
 
+#[allow(unused_assignments)]
 impl<'a> Graph<'a> {
     fn new() -> Self {
         Graph { circuits: Vec::<HashSet<&Node>>::new() }
@@ -114,8 +116,8 @@ impl<'a> Graph<'a> {
     }
 }
 
+#[allow(unused_variables)]
 pub fn run() {
-    let mut connections = 1000;
     let mut reader = BufReader::new(File::open("junction.txt").expect("reading file failed"));
     let mut line = String::new();
 
