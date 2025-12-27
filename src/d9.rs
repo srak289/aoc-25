@@ -26,6 +26,7 @@ impl Polygon {
         // this intersection is greatly simplified because we are only
         // checking for horizontal rays intersecting vertical segments
         let mut intersects = 0;
+        let mut shouldve = 0;
         let p2 = (100_000, p.1);
         for v in &self.verticals {
             // if the line is behind our point
@@ -42,35 +43,39 @@ impl Polygon {
                 (b2, b1) = (v.0, v.1);
             }
             if p.0 == b2.0 && p.1 >= b1.1 && p.1 <= b2.1 {
-                println!("Point {:?} sits on an edge, short-circuit", p);
+                //println!("Point {:?} sits on an edge, short-circuit true", p);
                 return true;
             }
             println!("Evaluate {:?}, {:?}, {:?}, {:?}", p, p2, b1, b2);
-            println!("Evaluate {} <= {}, {} >= {}, {} <= {}, {} >= {}", p.0, b1.0, p2.0, b1.0, p.1, b2.1, p.1, b1.1);
-            println!("Evaluate {}, {}, {}, {}", (p.0 <= b1.0), (p2.0 >= b1.0), (p.1 <= b2.1), (p.1 >= b1.1));
+            println!("Evaluate {} <= {}, {} >= {}, {} < {}, {} > {}", p.0, b1.0, p2.0, b1.0, p.1, b2.1, p.1, b1.1);
+            println!("Evaluate {}, {}, {}, {}", (p.0 <= b1.0), (p2.0 >= b1.0), (p.1 < b2.1), (p.1 > b1.1));
+            if p.1 == b2.1 || p.1 == b1.1 {
+                shouldve += 1;
+                println!("Should've {:?}, {:?}, {:?}", &p, &b1, &b2);
+            }
             if (
                 p.0 <= b1.0
                 && p2.0 >= b1.0
-                && p.1 <= b2.1
-                && p.1 >= b1.1
+                && p.1 < b2.1
+                && p.1 > b1.1
             ) {
                 println!("Found line intersection!");
                 intersects += 1;
             }
         }
-        println!("Returning intersection {}", (intersects % 2 == 1));
-        return intersects % 2 == 1;
+        println!("Returning intersection {}", (intersects % 2 == 1 || shouldve % 2 == 1));
+        return intersects % 2 == 1 || shouldve % 2 == 1;
     }
 
     fn contains(&mut self, p: Point) -> bool {
         // we cache our finds to hopefully gain later
         match self.cache.get(&p) {
             Some(x) => {
-                println!("Cache-HIT {:?}", &p);
+                //println!("Cache-HIT {:?}", &p);
                 return x.clone();
             }
             None => {
-                //println!("Checking point {:?}", &p);
+                println!("Checking point {:?}", &p);
                 let b = self.contained(&p);
                 self.cache.insert(p, b);
                 return b;
@@ -95,6 +100,13 @@ impl Polygon {
         let mut b = self.points[bdx].clone();
         let mut t: i64 = 0;
 
+        // short-circuit for single width
+        if a.1 == b.1 {
+            return Some((a.1 - b.1).abs() + 1);
+        } else if a.0 == b.0 {
+            return Some((a.1 - b.1).abs() + 1);
+        }
+
         if a.0 > b.0 {
             t = a.0;
             a.0 = b.0;
@@ -105,26 +117,26 @@ impl Polygon {
             a.1 = b.1;
             b.1 = t;
         }
-        println!("Checking rect {:?}:{:?}", a, b);
+        //println!("Checking rect {:?}:{:?}", a, b);
 
-        println!("Checking {:?}", (a.0+1, a.1));
+        //println!("Checking {:?}", (a.0+1, a.1));
         if !self.contains((a.0+1, a.1)) {
             return None;
         }
-        println!("Checking {:?}", (b.0, a.1+1));
+        //println!("Checking {:?}", (b.0, a.1+1));
         if !self.contains((b.0, a.1+1)) {
             return None;
         }
-        println!("Checking {:?}", (b.0-1, b.1));
+        //println!("Checking {:?}", (b.0-1, b.1));
         if !self.contains((b.0-1, b.1)) {
             return None;
         }
-        println!("Checking {:?}", (a.0, b.1-1));
+        //println!("Checking {:?}", (a.0, b.1-1));
         if !self.contains((a.0, b.1-1)) {
             return None;
         }
-        println!("Rect area of {:?},{:?}", &a, &b);
-        println!("Rect area {} * {}", ((a.0 - b.0).abs() + 1), ((a.1 - b.1).abs() + 1));
+        //println!("Rect area of {:?},{:?}", &a, &b);
+        //println!("Rect area {} * {}", ((a.0 - b.0).abs() + 1), ((a.1 - b.1).abs() + 1));
         return Some(((a.0 - b.0).abs() + 1) * ((a.1 - b.1).abs() + 1));
     }
 
@@ -133,7 +145,7 @@ impl Polygon {
             if self.points[idx].0 == self.points[idx+1].0
                 && self.points[idx].1 != self.points[idx+1].1
             {
-                println!("Vertical edge! {:?}:{:?}", &self.points[idx], &self.points[idx+1]);
+                //println!("Vertical edge! {:?}:{:?}", &self.points[idx], &self.points[idx+1]);
                 if self.points[idx].1 < self.points[idx+1].1 {
                     self.verticals.push((self.points[idx], self.points[idx+1]));
                 } else {
@@ -144,7 +156,7 @@ impl Polygon {
         if self.points[0].0 == self.points[self.points.len()-1].0
             && self.points[0].1 != self.points[self.points.len()-1].1
         {
-            println!("Vertical edge! {:?}:{:?}", &self.points[0], &self.points[self.points.len()-1]);
+            //println!("Vertical edge! {:?}:{:?}", &self.points[0], &self.points[self.points.len()-1]);
             if self.points[0].1 < self.points[self.points.len()-1].1 {
                 self.verticals.push((self.points[0], self.points[self.points.len()-1]));
             } else {
@@ -155,7 +167,7 @@ impl Polygon {
 }
 
 pub fn run() {
-    let mut reader = BufReader::new(File::open("movie_sample.txt").expect("reading file failed"));
+    let mut reader = BufReader::new(File::open("movie.txt").expect("reading file failed"));
     let mut line = String::new();
 
     let mut poly = Polygon::new();
@@ -170,7 +182,7 @@ pub fn run() {
                 let _ = line.pop();
                 let [x, y] = line.split(',').map(|s| s.parse::<i64>().unwrap()).collect::<Vec<_>>().try_into().unwrap();
                 let n = (x, y);
-                println!("Constructed point {:?}", n);
+                //println!("Constructed point {:?}", n);
                 poly.points.push(n);
                 line.clear();
             }
@@ -193,23 +205,30 @@ pub fn run() {
     // whether each point is inside or outside our shape
     //
 
+    let mut num_rect: i64 = 0;
+    let mut valid_rect: i64 = 0;
     let mut big_a: i64 = 0;
 
     for i in 0..poly.points.len() {
         for j in i+1..poly.points.len() {
             assert_ne!(i, j);
+            num_rect += 1;
             match poly.area(i, j) {
                 Some(x) => {
+                    valid_rect += 1;
                     if x > big_a {
+                        //println!("Found big a!");
                         big_a = x;
                     }
                 }
-                None => println!("Points {:?} and {:?} don't pass intersection", &poly.points[i], &poly.points[j]),
+                None => (),//println!("Points {:?} and {:?} don't pass intersection", &poly.points[i], &poly.points[j]),
             }
         }
     }
+    println!("Checked {} rects {} were valid", num_rect, valid_rect);
 
     println!("Big A: {}", big_a);
+    assert_ne!(big_a, 4646235780); // too high
 
     //let mut big_a: i64 = 0;
 
@@ -230,13 +249,16 @@ pub fn run() {
 mod test {
     use super::*;
 
-
     fn setup_polygon() -> Polygon {
         let mut p = Polygon::new();
-        p.points.push((1,1));
-        p.points.push((5,1));
-        p.points.push((5,5));
-        p.points.push((1,5));
+        p.points.push((7, 1)); //0
+        p.points.push((11, 1)); //1
+        p.points.push((11, 7)); //2
+        p.points.push((9, 7)); //3
+        p.points.push((9, 5)); //4
+        p.points.push((2, 5)); //5
+        p.points.push((2, 3)); //6
+        p.points.push((7, 3)); //7
         p.cache_verticals();
         return p;
     }
@@ -244,36 +266,49 @@ mod test {
     #[test]
     fn test_not_contains() {
         let mut p = setup_polygon();
-        assert_eq!(p.contains((1,0)), false);
-        assert_eq!(p.contains((6,0)), false);
-        assert_eq!(p.contains((3,0)), false);
-        assert_eq!(p.contains((7,6)), false);
+        assert_eq!(p.contains((12,6)), false);
+        assert_eq!(p.contains((1,6)), false);
     }
 
     #[test]
     fn test_contains() {
         let mut p = setup_polygon();
+        assert_eq!(p.contains((11,2)), true);
+        assert_eq!(p.contains((9,6)), true);
         assert_eq!(p.contains((3,3)), true);
-        assert_eq!(p.contains((2,1)), true);
     }
 
     #[test]
     fn test_origin_contains() {
         let mut p = setup_polygon();
-        //assert_eq!(p.contains((1,1)), true);
-        assert_eq!(p.contains((1,3)), true);
-        // failing because two lines overlap
+        assert_eq!(p.contains((2,3)), true);
     }
 
     #[test]
     fn test_maximum_contains() {
         let mut p = setup_polygon();
-        assert_eq!(p.contains((5,5)), true);
+        assert_eq!(p.contains((11,7)), true);
+    }
+
+    #[test]
+    fn test_rect_area_is_none() {
+        let mut p = setup_polygon();
+        assert_eq!(p.area(0, 5), None);
+        assert_eq!(p.area(1, 5), None);
+        assert_eq!(p.area(0, 6), None);
+        assert_eq!(p.area(1, 6), None);
+        assert_eq!(p.area(2, 5), None);
+        assert_eq!(p.area(5, 2), None);
     }
 
     #[test]
     fn test_rect_area_is_some() {
         let mut p = setup_polygon();
-        assert_eq!(p.area(0, 2), Some(25));
+        assert_eq!(p.area(4, 3), Some(3));
+        assert_eq!(p.area(3, 4), Some(3));
+        assert_eq!(p.area(1, 7), Some(15));
+        assert_eq!(p.area(4, 6), Some(24));
+        assert_eq!(p.area(1, 2), Some(7));
+        assert_eq!(p.area(1, 4), Some(15));
     }
 }
