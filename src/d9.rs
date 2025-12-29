@@ -12,6 +12,7 @@ struct Polygon {
     points: Vec<Point>,
     verticals: Vec<(Point, Point)>,
     cache: HashMap<Point, bool>,
+    cache_hits: u64,
 }
 
 impl Polygon {
@@ -20,6 +21,7 @@ impl Polygon {
             points: Vec::<Point>::new(),
             verticals: Vec::<(Point, Point)>::new(),
             cache: HashMap::<Point, bool>::new(),
+            cache_hits: 0,
         }
     }
 
@@ -52,7 +54,7 @@ impl Polygon {
             //println!("Evaluate {}, {}, {}, {}", (p.0 <= b1.0), (p2.0 >= b1.0), (p.1 < b2.1), (p.1 > b1.1));
             if p.1 == b2.1 || p.1 == b1.1 {
                 shouldve += 1;
-                println!("Should've {:?}, {:?}, {:?}", &p, &b1, &b2);
+                //println!("Should've {:?}, {:?}, {:?}", &p, &b1, &b2);
             }
             if (
                 p.0 <= b1.0
@@ -60,13 +62,12 @@ impl Polygon {
                 && p.1 < b2.1
                 && p.1 > b1.1
             ) {
-                println!("Found intersect {:?}, {:?}, {:?}", &p, &b1, &b2);
+                //println!("Found intersect {:?}, {:?}, {:?}", &p, &b1, &b2);
                 intersects += 1;
             }
         }
-        let ret = (intersects % 2 == 1 || shouldve % 2 == 1);
-        println!("Returning intersection {}", ret);
-        return ret;
+        //println!("Returning intersection {}", (intersects % 2 == 1 || shouldve % 2 == 1));
+        return intersects % 2 == 1 || shouldve % 2 == 1;
     }
 
     fn contains(&mut self, p: &Point) -> bool {
@@ -75,10 +76,11 @@ impl Polygon {
             Some(x) => {
                 // got ~250k cache-hits so was worth
                 //println!("Cache-HIT {:?}", &p);
+                self.cache_hits += 1;
                 return x.clone();
             }
             None => {
-                println!("Checking point {:?}", p);
+                //println!("Checking point {:?}", p);
                 let b = self.contained(p);
                 self.cache.insert((*p).clone(), b);
                 return b;
@@ -87,47 +89,113 @@ impl Polygon {
     }
 
     fn points_for(a: &Point, b: &Point) -> Box<dyn Iterator<Item=Point>> {
+        let mut points = Vec::<Point>::with_capacity(256);
+        let mut c: Point = (0, 0);
+        let mut d: Point = (0, 0);
+
+        fn midpoint(a: &Point, b: &Point) -> Point {
+            // find the midpoint between two points
+            let mut x = 0;
+            let mut y = 0;
+            if a.0 == b.0 {
+                x = a.0;
+            } else if a.1 == b.1 {
+                y = a.1;
+            }
+            if x == 0 {
+                x = (a.0 - b.0).abs() / 2;
+                if a.0 < b.0 {
+                    x += a.0;
+                } else {
+                    x += b.0;
+                }
+            }
+            if y == 0 {
+                y = (a.1 - b.1).abs() / 2;
+                if a.1 < b.1 {
+                    y += a.1;
+                } else {
+                    y += b.1;
+                }
+            }
+            //println!("Computed midpoint of {:?} and {:?} as {:?}", a, b, (x,y));
+            return (x, y);
+        }
+
+        fn testpoints(points: &mut Vec<Point>, a: &Point, b: &Point, c: &Point, d: &Point) {
+            // given a shape addressed counter-clockwise from the origin as a-b-c-d,
+            // compute the point along the perimeter rotated one position counter-clockwise
+            // and push to &points
+
+            // the four corner test points
+            points.push((a.0+1, a.1));
+            points.push((b.0, b.1+1));
+            points.push((c.0-1, c.1));
+            points.push((d.0, d.1-1));
+
+            // the centroid
+            points.push(midpoint(a, c));
+
+            let mut x = b.0;
+            let mut y = a.1;
+
+            for x in (a.0..b.0).step_by(100) {
+                points.push((x, y));
+            }
+            for y in (b.1..c.1).step_by(100) {
+                points.push((x, y));
+            }
+            y = d.1;
+            for x in (d.0..c.0).step_by(100) {
+                points.push((x, y));
+            }
+            x = a.0;
+            for y in (a.1..d.1).step_by(100) {
+                points.push((x, y));
+            }
+        }
+
         if a.0 < b.0 {
             // then c is also left
             if a.1 < b.1 {
-                let c = (b.0, a.1);
-                let d = (a.0, b.1);
+                c = (b.0, a.1);
+                d = (a.0, b.1);
                 // then a, c, b, d
                 //println!("A is close to origin, Order a,c,b,d");
                 //println!("Returning points {:?}, {:?}, {:?}, {:?}",
                 //    (a.0+1, a.1), (c.0, c.1+1), (b.0-1, b.1), (d.0, d.1-1));
-                return Box::new([(a.0+1, a.1), (c.0, c.1+1), (b.0-1, b.1), (d.0, d.1-1)].into_iter())
-                
+                testpoints(&mut points, &a, &c, &b, &d);
             } else {
-                let c = (a.0, b.1);
-                let d = (b.0, a.1);
+                c = (a.0, b.1);
+                d = (b.0, a.1);
                 // then c, b, d, a
                 //println!("C is close to origin, Order c,b,d,a");
                 //println!("Returning points {:?}, {:?}, {:?}, {:?}",
                 //    (c.0+1, c.1), (b.0, b.1+1), (d.0-1, d.1), (a.0, a.1-1));
-                return Box::new([(c.0+1, c.1), (b.0, b.1+1), (d.0-1, d.1), (a.0, a.1-1)].into_iter())
+                testpoints(&mut points, &c, &b, &d, &a);
             }
         } else {
             // then c is also right
             if a.1 < b.1 {
-                let c = (a.0, b.1);
-                let d = (b.0, a.1);
+                c = (a.0, b.1);
+                d = (b.0, a.1);
                 // d, a, c, b
                 //println!("D is close to origin, Order d,a,c,b");
                 //println!("Returning points {:?}, {:?}, {:?}, {:?}", d, a, c, b);
                 //println!("Modified points {:?}, {:?}, {:?}, {:?}",
                 //    (d.0+1, d.1), (a.0, a.1+1), (c.0-1, c.1), (b.0, b.1-1));
-                return Box::new([(d.0+1, d.1), (a.0, a.1+1), (c.0-1, c.1), (b.0, b.1-1)].into_iter())
+                testpoints(&mut points, &d, &a, &c, &b);
             } else {
-                let c = (b.0, a.1);
-                let d = (a.0, b.1);
+                c = (b.0, a.1);
+                d = (a.0, b.1);
                 // b, d, a, c
                 //println!("B is close to origin, Order b,d,a,c");
                 //println!("Returning points {:?}, {:?}, {:?}, {:?}",
                 //    (b.0+1, b.1), (d.0, d.1+1), (a.0-1, a.1), (c.0, c.1-1));
-                return Box::new([(b.0+1, b.1), (d.0, d.1+1), (a.0-1, a.1), (c.0, c.1-1)].into_iter())
+                testpoints(&mut points, &b, &d, &a, &c);
             }
         }
+        return Box::new(points.into_iter());
     }
 
     fn area(&mut self, adx: usize, bdx: usize) -> Option<i64> {
@@ -232,7 +300,7 @@ pub fn run() {
                     if x > big_a {
                         //println!("Found big a!");
                         big_a = x;
-                        println!("BIG {} constructed from {:?},{:?}", big_a, &poly.points[i], &poly.points[j]);
+                        //println!("BIG {} constructed from {:?},{:?}", big_a, &poly.points[i], &poly.points[j]);
                     }
                 }
                 None => (),//println!("Points {:?} and {:?} don't pass intersection", &poly.points[i], &poly.points[j]),
@@ -240,9 +308,11 @@ pub fn run() {
         }
     }
     println!("Checked {} rects {} were valid", num_rect, valid_rect);
-
+    println!("Cache-hits: {}", poly.cache_hits);
     println!("Big A: {}", big_a);
     assert_ne!(big_a, 4646235780); // too high
+    assert_ne!(big_a, 3642758717); // too high
+    assert_ne!(big_a, 3440890272); // too high
 
     //let mut big_a: i64 = 0;
 
