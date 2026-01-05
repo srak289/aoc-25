@@ -46,7 +46,7 @@ impl Machine {
             let mut newfront: HashSet<Vec<u16>> = HashSet::new();
 
             for f in &frontier {
-                println!("Checking key {:?}", f);
+                // println!("Checking key {:?}", f);
                 if !map.contains(f) {
                     // new node
                     let mut edges: HashSet<Vec<u16>> = HashSet::new();
@@ -57,11 +57,13 @@ impl Machine {
                     }
                     for bdx in 0..self.buttons.len() {
                         let mut ff = f.clone();
+                        // println!("Working button {:?} for frontier {:?}", self.buttons[bdx], ff);
                         for i in 0..ff.len() {
-                            println!("Adding {} at pos {} to {:?}", (self.buttons[bdx] & 2_u16.pow(i.try_into().unwrap())), bdx, ff);
-                            ff[i] += self.buttons[bdx] & 2_u16.pow(i.try_into().unwrap());
+                            let j = (self.buttons[bdx] & 2_u16.pow(i.try_into().unwrap())) >> i;
+                            // println!("Adding {} at pos {} to {:?}", j, i, ff);
+                            ff[i] += j;
                         }
-                        println!("Building edge {:?}", ff);
+                        // println!("Building edge {:?}", ff);
                         edges.insert(ff.clone());
                         newfront.insert(ff.clone());
                     }
@@ -71,8 +73,6 @@ impl Machine {
                         break;
                     }
                     map.insert(f.clone());
-                } else {
-                    println!("{:?} already visited", f);
                 }
             }
             if done {
@@ -91,7 +91,7 @@ impl Machine {
 }
 
 fn main() {
-    let mut reader = BufReader::new(File::open("factory_sample.txt").expect("reading file failed"));
+    let mut reader = BufReader::new(File::open("factory.txt").expect("reading file failed"));
     let mut line = String::new();
 
     let mut machines = Vec::<Machine>::new();
