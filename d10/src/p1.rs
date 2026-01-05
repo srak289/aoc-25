@@ -91,7 +91,7 @@ impl Machine {
 //}
 
 fn main() {
-    let mut reader = BufReader::new(File::open("factory_sample.txt").expect("reading file failed"));
+    let mut reader = BufReader::new(File::open("factory.txt").expect("reading file failed"));
     let mut line = String::new();
 
     let mut machines = Vec::<Machine>::new();
