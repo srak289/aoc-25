@@ -24,16 +24,33 @@ impl DG {
         //
         // start point is 'you'
         // find all paths to 'out'
-        for n in self.nodes {
-            if n in self.adjlist {
+
+        let mut alist: HashSet<String> = HashSet::with_capacity(1024);
+
+        let mut paths: usize = 0;
+
+        fn descend(node: &String, nodes: &HashMap<String, Vec<String>>, alist: &mut HashSet<String>, paths: &mut usize) {
+            match nodes.get(node) {
+                Some(edges) => {
+                    println!("Found edges {:?}", edges);
+                    for n in edges {
+                        descend(n, nodes, alist, paths);
+                    }
+                }
+                None => {
+                    *paths += 1;
+                    println!("Found leaf {}", node);
+                }
             }
         }
-        return 6;
+
+        descend(&String::from("you"), &self.nodes, &mut alist, &mut paths);
+        return paths;
     }
 }
 
 fn build_dg() -> DG {
-    let mut reader = BufReader::new(File::open("input_sample.txt").expect("reading file failed"));
+    let mut reader = BufReader::new(File::open("input.txt").expect("reading file failed"));
     let mut line = String::new();
 
     let label_re = Regex::new(r"^([a-z]+):").expect("invalid regex");
@@ -48,9 +65,9 @@ fn build_dg() -> DG {
                     break;
                 }
                 let label = label_re.captures(&line).unwrap().get(1).unwrap().as_str();
-                println!("Label: {}", label);
+                // println!("Label: {}", label);
                 let outputs: Vec::<_> = output_re.find_iter(&line).map(|m: Match| m.as_str().trim().to_string()).collect();
-                println!("Outputs {:?}", outputs);
+                // println!("Outputs {:?}", outputs);
                 dg.insert(label.to_string().clone(), outputs.clone());
                 line.clear();
             }
@@ -63,6 +80,8 @@ fn build_dg() -> DG {
 
 fn main() {
     let dg = build_dg();
+    let paths = dg.solve();
+    println!("There are {}", paths);
 }
 
 #[cfg(test)]
